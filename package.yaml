@@ -1,10 +1,10 @@
 name:                dnd-chat
 version:             0.1.0.0
-github:              "githubuser/dnd-chat"
+github:              "testare/dnd-chat"
 license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+author:              "Logan Woodbury"
+maintainer:          "testare.i9z@gmail.com"
+copyright:           "2018 Logan Woodbury"
 
 extra-source-files:
 - README.md
@@ -21,6 +21,8 @@ description:         Please see the README on Github at <https://github.com/gith
 
 dependencies:
 - base >= 4.7 && < 5
+- network >= 2.6 && < 2.7
+- bytestring >= 0.10 && < 0.11
 
 library:
   source-dirs: src
