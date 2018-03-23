@@ -1,7 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Lib
-    ( someFunc
-    ) where
+module Lib where
 
 import qualified Network.Socket as NS
 import Network.Socket.ByteString (recv,sendAll)
