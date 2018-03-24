@@ -8,6 +8,7 @@ import qualified System.Console.Terminal.Size as TSize (size, Window(..))
 import Control.Concurrent
 import Control.Concurrent.Async(async, poll, cancel, Async(..))
 import Control.Exception(throw)
+import Data.Maybe(isJust, fromMaybe)
 
 --createOoeyTerminal :: MVar (Either String String) -> MVar String -> IO ()
 
@@ -30,9 +31,58 @@ ooeyTerminalInit toTerminal fromTerminal = do
     sequence $ putStrLn <$> (replicate 2 "")
     ooeyTerminalLoop "" as toTerminal fromTerminal
     hSetEcho stdin True
+    putStrLn ""
 
 ooeyTerminalLoop :: String -> Async Char -> MVar (Either String String) -> MVar String -> IO ()
 ooeyTerminalLoop currentInput getch toTerminal fromTerminal = do 
+    toOut <- tryTakeMVar toTerminal
+    getchResults <- poll getch
+    let (inputChange, nextGetch, nextInput) = flip (maybe (False, (return getch),currentInput)) getchResults $ either throw (\result -> (True, (async getChar), if (result /= '\DEL') then (currentInput ++ (pure result)) else (if currentInput /= "" then (init currentInput) else "")))
+    let needToPrintInput = (isJust toOut) || inputChange
+    nextInput2 <- evalInput nextInput
+    quitSignalFromOutput <- maybe (return False) printOutput toOut 
+    if inputChange then repositionCursor else return ()
+    if needToPrintInput then printInput (fromMaybe "" nextInput2) else return ()
+    --Gather new input
+    --let updatedInput
+    realNextGetch <- nextGetch
+    if quitSignalFromOutput 
+        then (closeTerminal realNextGetch) 
+        else (maybe closeTerminal recur nextInput2) realNextGetch
+    where 
+        repositionCursor = do
+            (Just TSize.Window{TSize.width=w}) <- TSize.size
+            let inputBufferSize = succ $ (pred (length currentInput)) `div` w
+            ANSI.hideCursor
+            cursorUpLine inputBufferSize
+        recur input_ getch_ = do
+            yield
+            threadDelay 2500
+            ooeyTerminalLoop input_ getch_ toTerminal fromTerminal
+        printInput input_ = do
+            ANSI.hideCursor
+            ANSI.setCursorColumn 0
+            putStr "---"
+            ANSI.clearFromCursorToLineEnd
+            putStrLn ""
+            putStr input_
+            ANSI.clearFromCursorToLineEnd
+            ANSI.showCursor
+        printOutput output_ = do
+            let (quitSignal, outputString) = either (\x->(True, x)) (\x->(False, x)) output_
+            repositionCursor
+            putStrLn $ ANSI.clearLineCode ++ outputString
+            return quitSignal
+        closeTerminal getch_ = (cancel getch_)
+        evalInput :: String -> IO (Maybe String)
+        evalInput input_ = do
+            if input_ /= "" && (last input_) == '\n' 
+                then putMVar fromTerminal (init input_) >> ANSI.showCursor >> return (Just "") 
+                else return (Just input_)
+
+
+ooeyTerminalLoop' :: String -> Async Char -> MVar (Either String String) -> MVar String -> IO ()
+ooeyTerminalLoop' currentInput getch toTerminal fromTerminal = do 
     toOut <- tryTakeMVar toTerminal
     getchResults <- poll getch
     let (nextGetch,nextInput) = flip (maybe ((return getch),currentInput)) getchResults $ either throw (\result -> ((async getChar), if (result /= '\DEL') then (currentInput ++ (pure result)) else (if currentInput /= "" then (init currentInput) else "")))
@@ -68,13 +118,17 @@ ooeyTerminalLoop currentInput getch toTerminal fromTerminal = do
         printOutput output_ input_ = do
             putStrLn ""
 
-
-
 testOoeyTerminal :: IO ()
 testOoeyTerminal = do
     m <- testing_loudToTerminal
     n <- testing_emptyFromTerminal
+    forkIO $ do
+        threadDelay 2000000
+        putMVar m $ Right "Blah!"
+        threadDelay 10000000
+        putMVar m $ Left "Bye!"
     ooeyTerminalInit m n
+    putStrLn =<< show <$> (tryTakeMVar n)
 
 --For fun
 createWindowFrame :: IO ()
