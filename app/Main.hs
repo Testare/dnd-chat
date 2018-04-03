@@ -4,7 +4,7 @@ import Lib
 import Lib.UI as UI
 
 main :: IO ()
-main = UI.createWindowFrame
+main = someFunc
 
 someFunc :: IO ()
 someFunc = do
@@ -12,5 +12,6 @@ someFunc = do
     h <- getLine
     putStrLn $ "You said: (" ++ h ++ ")\n"
     if (h == "c") then runClient else 
-        if (h == "s") then runServer else
-            UI.runQuitOnQ
+        if (h == "s") then runServer else 
+            if (h == "ooey") then UI.testOoeyTerminal else 
+            someFunc

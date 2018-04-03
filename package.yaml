@@ -27,6 +27,8 @@ dependencies:
 - ansi-terminal >= 0.8 && < 0.9
 - terminal-size >= 0.3 && < 0.4
 - async >= 2.1 && < 2.3
+- stm >= 2.4.5 && < 2.5
+- process >= 1.6 && < 1.7
 
 library:
   source-dirs: src

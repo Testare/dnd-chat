@@ -1,17 +1,24 @@
 {-# LANGUAGE OverloadedStrings #-}
 module Lib where
 
+import qualified Lib.UI as Ooey 
+
 import qualified Network.Socket as NS
 import Network.Socket.ByteString (recv,sendAll)
 import qualified Control.Exception as E
 import qualified Data.ByteString.Char8 as C
+import Control.Concurrent.STM as STM
 
 --import qualified Network.Simple.TCP as TCP
 
 runClient :: IO ()
 runClient = NS.withSocketsDo $ do
         addr <- resolve "127.0.0.1" "12482"
-        E.bracket (open addr) NS.close talk
+        Ooey.withOoeyTerminal Ooey.defaultOoeyConfig $ \userIO -> do 
+            E.bracket (open addr) NS.close (talk userIO)
+            userSays2 <- Ooey.ooeyGetLine userIO 
+            Ooey.ooeyPutStr userIO $ Right $ "U: " ++ userSays2
+            Ooey.ooeyPutStr userIO $ Left "Time to go, bye!"
     where
         resolve host port = do
             let hints = NS.defaultHints { NS.addrSocketType = NS.Stream }
@@ -21,11 +28,16 @@ runClient = NS.withSocketsDo $ do
             sock <- NS.socket (NS.addrFamily addr) (NS.addrSocketType addr) (NS.addrProtocol addr)
             NS.connect sock $ NS.addrAddress addr
             return sock
-        talk sock = do
-            sendAll sock "Hello, world!"
+        talk userIO sock = do
+            Ooey.ooeyPutStr userIO $ Right "What should you say?"
+            userSays <- Ooey.ooeyGetLine userIO
+            sendAll sock $ C.pack userSays --"Hello, world!"
             msg <- recv sock 1024
-            putStr "Received: "
-            C.putStrLn msg
+            Ooey.ooeyPutStr userIO $ Right (C.unpack msg)
+            return ()
+            --STM.atomically $ STM.writeTChan userOut $ Left (C.unpack msg)
+            --putStr "Received: "
+            --C.putStrLn msg
 
 runServer :: IO ()
 runServer = NS.withSocketsDo $ do
@@ -59,4 +71,3 @@ runServerLoop sock = do
     putStr "Received: "
     C.putStrLn msg
     sendAll conn "Goodbye scrub!"
-    NS.close conn
