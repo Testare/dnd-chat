@@ -11,6 +11,7 @@ import qualified Data.ByteString.Char8 as C
 import Control.Concurrent.STM as STM
 import System.IO
 import Control.Concurrent(forkIO, forkFinally)
+import System.Environment(getArgs)
 
 import qualified Data.Map as Map
 import Data.Char(toUpper)
@@ -41,17 +42,27 @@ ooeyTerminalWithSocket recvFunc sendFunc errMsg userIO socket = do
 
 clientRecvFunc :: String -> IO (Either Ooey.ExitMessage String)
 clientRecvFunc "" = return $ Left "Connection closed"
-clientRecvFunc "QUIT" = return $ Left "quitting..."
+clientRecvFunc ('q':quitMessage) = return $ Left quitMessage
 clientRecvFunc str = return $ Right str
 
 clientSendFunc :: String -> IO String 
-clientSendFunc = return . map toUpper
+clientSendFunc ":q" = return "q"
+clientSendFunc msg = return $ 'm':msg
+
+getAddress :: IO String
+getAddress = do
+    args <- getArgs
+    return $ if "-a" `elem` args then head $ tail $ dropWhile (/= "-a") args else "127.0.0.1"
 
 runClient :: IO ()
 runClient = NS.withSocketsDo $ do
-        addr <- resolve "127.0.0.1" "12482"
+        chosenAddr <- getAddress
+        addr <- resolve chosenAddr "12482"
         E.bracket (open addr) NS.close $ \socket -> do 
             Ooey.withOoeyTerminal Ooey.defaultOoeyConfig $ \userIO -> do 
+                Ooey.ooeyPutStr userIO $ Right "What is your name?"
+                name <- Ooey.ooeyGetLine userIO
+                sendAll socket $ C.pack $ 'c':(show $ Server.CharacterData name)
                 ooeyTerminalWithSocket clientRecvFunc clientSendFunc "quit" userIO socket 
     where
         resolve host port = do
