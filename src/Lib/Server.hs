@@ -10,18 +10,24 @@ import qualified Data.ByteString.Char8 as C
 import Control.Concurrent.STM as STM
 import System.IO
 import Control.Concurrent(forkIO, forkFinally)
-
+import System.Environment(getArgs)
 import qualified Data.Map as Map
+
+getPort :: IO String
+getPort = do
+    args <- getArgs
+    return $ if "-p" `elem` args then head $ tail $ dropWhile (/= "-p") args else "12482"
 
 runServer :: IO ()
 runServer = NS.withSocketsDo $ Ooey.withOoeyTerminal Ooey.defaultOoeyConfig $ \userIO -> do
+    port <- getPort
     address:_ <- NS.getAddrInfo (
         Just (NS.defaultHints 
                 { NS.addrFlags = [NS.AI_PASSIVE]
                 , NS.addrSocketType = NS.Stream 
                 }))
         Nothing 
-        (Just "12482")
+        (Just port)
     Ooey.ooeyPutStr userIO $ Right $ "Starting server at: [" ++ (show address) ++ "]"
     E.bracket (openServerSocket address) closeServerSocket (runServerLoop userIO) 
     Ooey.ooeyGetLine userIO

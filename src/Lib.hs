@@ -54,10 +54,16 @@ getAddress = do
     args <- getArgs
     return $ if "-a" `elem` args then head $ tail $ dropWhile (/= "-a") args else "127.0.0.1"
 
+getPort :: IO String
+getPort = do
+    args <- getArgs
+    return $ if "-p" `elem` args then head $ tail $ dropWhile (/= "-p") args else "12482"
+
 runClient :: IO ()
 runClient = NS.withSocketsDo $ do
         chosenAddr <- getAddress
-        addr <- resolve chosenAddr "12482"
+        chosenPort <- getPort
+        addr <- resolve chosenAddr chosenPort
         E.bracket (open addr) NS.close $ \socket -> do 
             Ooey.withOoeyTerminal Ooey.defaultOoeyConfig $ \userIO -> do 
                 Ooey.ooeyPutStr userIO $ Right "What is your name?"
