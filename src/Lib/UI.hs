@@ -6,6 +6,7 @@ module Lib.UI
     , testOoeyTerminal
     , ooeyPutStr
     , ooeyGetLine
+    , ooeyTryPeek
     , ExitMessage
     , OoeyIO
     , OoeyConfig
@@ -92,6 +93,12 @@ ooeyPutStr (out,_) = STM.atomically .  STM.writeTChan out
 
 ooeyGetLine :: (a, STM.TChan String) -> IO String 
 ooeyGetLine = STM.atomically . STM.readTChan . snd
+
+ooeyTryPeek :: (a, STM.TChan String) -> IO (Maybe String)
+ooeyTryPeek = STM.atomically . STM.tryPeekTChan . snd
+
+--ooeyTryGetLine :: (a, STM.TChan String) -> IO String 
+--ooeyTryGetLine = STM.atomically . flip STM.catchSTM (\(a :: SomeException) -> return "") . STM.readTChan . snd
 
 withOoeyTerminal :: OoeyConfig -> ((STM.TChan (Either ExitMessage String), STM.TChan String) -> IO ()) -> IO ()
 withOoeyTerminal config f = do
@@ -184,9 +191,10 @@ ooeyTerminalLoop currentInput getch config toTerminal fromTerminal = do
         --new input buffer will be in either case
         evalInput :: String -> IO (Maybe String)
         evalInput input_ = do
-            if input_ /= "" && (last input_) == '\n' 
-                then STM.atomically (STM.writeTChan fromTerminal (init input_)) >> ANSI.showCursor >> return (Just "") 
-                else return (Just input_)
+            if input_ == "\n" then return (Just "")
+                else if input_ /= "" && (last input_) == '\n' 
+                    then STM.atomically (STM.writeTChan fromTerminal (init input_)) >> ANSI.showCursor >> return (Just "") 
+                    else return (Just input_)
 
 echoLoop :: STM.TChan String -> STM.TChan (Either ExitMessage String) -> IO ()
 echoLoop in_ out_ = do

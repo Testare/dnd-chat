@@ -29,11 +29,30 @@ dependencies:
 - async >= 2.1 && < 2.3
 - stm >= 2.4.5 && < 2.5
 - process >= 1.6 && < 1.7
+- containers
 
 library:
   source-dirs: src
 
 executables:
+  c:
+    main:                Client
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dnd-chat
+  s:
+    main:                Server
+    source-dirs:         app
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - dnd-chat
   dnd-chat-exe:
     main:                Main.hs
     source-dirs:         app
