@@ -62,6 +62,7 @@ runClient = NS.withSocketsDo $ do
             Ooey.withOoeyTerminal Ooey.defaultOoeyConfig $ \userIO -> do 
                 Ooey.ooeyPutStr userIO $ Right "What is your name?"
                 name <- Ooey.ooeyGetLine userIO
+                Ooey.ooeyPutStr userIO $ Right $ "Your name is [" ++ name ++  "]"
                 sendAll socket $ C.pack $ 'c':(show $ Server.CharacterData name)
                 ooeyTerminalWithSocket clientRecvFunc clientSendFunc "quit" userIO socket 
     where
