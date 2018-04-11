@@ -31,7 +31,10 @@ ooeyTerminalWithSocket recvFunc sendFunc errMsg userIO socket = do
           sendInput userIO = do 
             userInput <- E.try (Ooey.ooeyGetLine userIO) :: IO (Either E.SomeException String)
             funcyUserInput <- either (const $ return errMsg) sendFunc userInput
+            --userInput <- Ooey.ooeyGetLine userIO
+            --let funcyUserInput = userInput
             sendAll socket $ C.pack $ funcyUserInput
+            sendInput userIO
             either (const $ return ()) (const $ sendInput userIO) userInput
 
           recvOutput :: Ooey.OoeyIO -> IO ()
